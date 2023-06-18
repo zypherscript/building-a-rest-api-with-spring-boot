@@ -1,6 +1,8 @@
 package com.example.cashcard;
 
+import java.security.Principal;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -26,16 +28,19 @@ public class CashCardController {
   }
 
   @GetMapping("/{requestedId}") //get for fetch some
-  public ResponseEntity<CashCard> findById(@PathVariable Long requestedId) {
-    var cashCardOptional = cashCardRepository.findById(requestedId);
+  public ResponseEntity<CashCard> findById(@PathVariable Long requestedId, Principal principal) {
+    var cashCardOptional = Optional.ofNullable(
+        cashCardRepository.findByIdAndOwner(requestedId, principal.getName()));
     return cashCardOptional.map(ResponseEntity::ok) //ok vs not found
         .orElseGet(() -> ResponseEntity.notFound().build());
   }
 
   @PostMapping //post for create
   private ResponseEntity<Void> createCashCard(@RequestBody CashCard newCashCardRequest,
-      UriComponentsBuilder ucb) {
-    var savedCashCard = cashCardRepository.save(newCashCardRequest);
+      UriComponentsBuilder ucb, Principal principal) {
+    var cashCardWithOwner = new CashCard(null, newCashCardRequest.amount(),
+        principal.getName());
+    var savedCashCard = cashCardRepository.save(cashCardWithOwner);
     var locationOfNewCashCard = ucb
         .path("cashcards/{id}")
         .buildAndExpand(savedCashCard.id())
@@ -44,8 +49,8 @@ public class CashCardController {
   }
 
   @GetMapping //get for getting all
-  public ResponseEntity<List<CashCard>> findAll(Pageable pageable) {
-    var page = cashCardRepository.findAll(
+  public ResponseEntity<List<CashCard>> findAll(Pageable pageable, Principal principal) {
+    var page = cashCardRepository.findByOwner(principal.getName(),
         PageRequest.of(
             pageable.getPageNumber(),
             pageable.getPageSize(),
