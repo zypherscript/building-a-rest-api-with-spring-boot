@@ -175,4 +175,38 @@ class CashCardApplicationTests {
         .exchange("/cashcards/99999", HttpMethod.PUT, request, Void.class);
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
   }
+
+  @Test
+  void shouldDeleteAnExistingCashCard() {
+    var response = restTemplate
+        .withBasicAuth("sarah1", "abc123")
+        .exchange("/cashcards/99", HttpMethod.DELETE, null, Void.class);
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+    var getResponse = restTemplate
+        .withBasicAuth("sarah1", "abc123")
+        .getForEntity("/cashcards/99", String.class);
+    assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+  }
+
+  @Test
+  void shouldNotDeleteACashCardThatDoesNotExist() {
+    var deleteResponse = restTemplate
+        .withBasicAuth("sarah1", "abc123")
+        .exchange("/cashcards/99999", HttpMethod.DELETE, null, Void.class);
+    assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+  }
+
+  @Test
+  void shouldNotAllowDeletionOfCashCardsTheyDoNotOwn() {
+    var deleteResponse = restTemplate
+        .withBasicAuth("sarah1", "abc123")
+        .exchange("/cashcards/102", HttpMethod.DELETE, null, Void.class);
+    assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+    var getResponse = restTemplate
+        .withBasicAuth("kumar2", "xyz789")
+        .getForEntity("/cashcards/102", String.class);
+    assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+  }
 }
